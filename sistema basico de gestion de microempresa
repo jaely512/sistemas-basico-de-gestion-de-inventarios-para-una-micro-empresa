@@ -1,59 +1,112 @@
-package modelo;
+import java.util.*;
 
-import java.util.Date;
+// Clase que representa una arista
+class Arista implements Comparable<Arista> {
+    int origen, destino, peso;
 
-public class Producto {
-
-    private int idProducto;
-    private String nombre;
-    private String descripcion;
-    private double precio;
-    private int stockActual;
-    private int stockMinimo;
-    private Date fechaVencimiento;
-
-    public Producto() {}
-
-    public Producto(int idProducto, String nombre, String descripcion,
-                    double precio, int stockActual, int stockMinimo, Date fechaVencimiento) {
-        this.idProducto = idProducto;
-        this.nombre = nombre;
-        this.descripcion = descripcion;
-        this.precio = precio;
-        this.stockActual = stockActual;
-        this.stockMinimo = stockMinimo;
-        this.fechaVencimiento = fechaVencimiento;
+    public Arista(int origen, int destino, int peso) {
+        this.origen = origen;
+        this.destino = destino;
+        this.peso = peso;
     }
 
-    public Producto(String nombre, String descripcion,
-                    double precio, int stockActual, int stockMinimo, Date fechaVencimiento) {
-        this.nombre = nombre;
-        this.descripcion = descripcion;
-        this.precio = precio;
-        this.stockActual = stockActual;
-        this.stockMinimo = stockMinimo;
-        this.fechaVencimiento = fechaVencimiento;
+    // Para ordenar por peso
+    @Override
+    public int compareTo(Arista otra) {
+        return this.peso - otra.peso;
+    }
+}
+
+// Clase principal del Grafo
+class Grafo {
+    int numVertices;
+    List<Arista> aristas;
+
+    public Grafo(int numVertices) {
+        this.numVertices = numVertices;
+        this.aristas = new ArrayList<>();
     }
 
-    // Getters y Setters
-    public int getIdProducto() { return idProducto; }
-    public void setIdProducto(int idProducto) { this.idProducto = idProducto; }
+    public void agregarArista(int origen, int destino, int peso) {
+        aristas.add(new Arista(origen, destino, peso));
+    }
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    // Clase interna para Union-Find
+    class Subconjunto {
+        int padre, rango;
+    }
 
-    public String getDescripcion() { return descripcion; }
-    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+    // Encontrar el representante del conjunto (con compresión de caminos)
+    int find(Subconjunto[] subconjuntos, int i) {
+        if (subconjuntos[i].padre != i) {
+            subconjuntos[i].padre = find(subconjuntos, subconjuntos[i].padre);
+        }
+        return subconjuntos[i].padre;
+    }
 
-    public double getPrecio() { return precio; }
-    public void setPrecio(double precio) { this.precio = precio; }
+    // Unión por rango
+    void union(Subconjunto[] subconjuntos, int x, int y) {
+        int raizX = find(subconjuntos, x);
+        int raizY = find(subconjuntos, y);
 
-    public int getStockActual() { return stockActual; }
-    public void setStockActual(int stockActual) { this.stockActual = stockActual; }
+        if (subconjuntos[raizX].rango < subconjuntos[raizY].rango) {
+            subconjuntos[raizX].padre = raizY;
+        } else if (subconjuntos[raizX].rango > subconjuntos[raizY].rango) {
+            subconjuntos[raizY].padre = raizX;
+        } else {
+            subconjuntos[raizY].padre = raizX;
+            subconjuntos[raizX].rango++;
+        }
+    }
 
-    public int getStockMinimo() { return stockMinimo; }
-    public void setStockMinimo(int stockMinimo) { this.stockMinimo = stockMinimo; }
+    // Método de Kruskal
+    public void kruskal() {
+        List<Arista> resultado = new ArrayList<>();
 
-    public Date getFechaVencimiento() { return fechaVencimiento; }
-    public void setFechaVencimiento(Date fechaVencimiento) { this.fechaVencimiento = fechaVencimiento; }
+        // 1. Ordenar aristas por peso
+        Collections.sort(aristas);
+
+        // 2. Crear subconjuntos
+        Subconjunto[] subconjuntos = new Subconjunto[numVertices];
+        for (int i = 0; i < numVertices; i++) {
+            subconjuntos[i] = new Subconjunto();
+            subconjuntos[i].padre = i;
+            subconjuntos[i].rango = 0;
+        }
+
+        int i = 0;
+        while (resultado.size() < numVertices - 1 && i < aristas.size()) {
+            Arista siguiente = aristas.get(i++);
+
+            int x = find(subconjuntos, siguiente.origen);
+            int y = find(subconjuntos, siguiente.destino);
+
+            // Si no forma ciclo, se agrega
+            if (x != y) {
+                resultado.add(siguiente);
+                union(subconjuntos, x, y);
+            }
+        }
+
+        // Mostrar resultado
+        System.out.println("Árbol de Expansión Mínima (Kruskal):");
+        for (Arista a : resultado) {
+            System.out.println(a.origen + " -- " + a.destino + " == " + a.peso);
+        }
+    }
+}
+
+// Clase de prueba
+public class Main {
+    public static void main(String[] args) {
+        Grafo grafo = new Grafo(4);
+
+        grafo.agregarArista(0, 1, 10);
+        grafo.agregarArista(0, 2, 6);
+        grafo.agregarArista(0, 3, 5);
+        grafo.agregarArista(1, 3, 15);
+        grafo.agregarArista(2, 3, 4);
+
+        grafo.kruskal();
+    }
 }
